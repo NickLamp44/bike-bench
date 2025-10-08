@@ -95,7 +95,7 @@ export default function FeaturedShowCase() {
         Featured ShowCases
       </Typography>
 
-      <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
+      {/* <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
         <ButtonGroup variant="text" aria-label="category button group">
           {categories.map((cat) => (
             <Button
@@ -117,7 +117,7 @@ export default function FeaturedShowCase() {
             </Button>
           ))}
         </ButtonGroup>
-      </Box>
+      </Box> */}
 
       {loadingShowcases ? (
         <Box display="flex" justifyContent="center">

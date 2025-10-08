@@ -92,7 +92,7 @@ export default function FeaturedBlogs() {
         Featured Blogs
       </Typography>
 
-      <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
+      {/* <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
         <ButtonGroup variant="text" aria-label="category button group">
           {categories.map((cat) => (
             <Button
@@ -114,7 +114,7 @@ export default function FeaturedBlogs() {
             </Button>
           ))}
         </ButtonGroup>
-      </Box>
+      </Box> */}
 
       {loadingBlogs ? (
         <Box display="flex" justifyContent="center">

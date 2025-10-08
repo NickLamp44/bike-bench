@@ -478,11 +478,11 @@ export default function Article({
         />
       </Paper>
 
-      {showComments && (
+      {/* {showComments && (
         <Box sx={{ mt: 4 }}>
           <Comments showCaseId={articleId} />
         </Box>
-      )}
+      )} */}
     </Container>
   );
 }
