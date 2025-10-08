@@ -134,7 +134,7 @@ export default function Navbar() {
         position="static"
         sx={{
           height: "100px",
-          background:"#4d4a48",
+          background:"#507e6c",
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",
