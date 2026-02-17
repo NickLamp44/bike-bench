@@ -9,101 +9,51 @@ import {
   Grid,
   Box,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import ArticleCard from "../components/content/article/articleCard";
+import * as wordPressAPI from "../services/wordPressAPI";
 
 export default function ShowCase() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [showCase, setShowCase] = useState([]);
   const [categories, setCategories] = useState(["all"]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchCategoriesAndShowCases = async () => {
       try {
-        const wpUrl = process.env.REACT_APP_WORDPRESS_URL;
+        setError(null);
 
-        if (!wpUrl) {
-          throw new Error(
-            "WordPress URL not configured. Please set REACT_APP_WORDPRESS_URL in your environment variables."
-          );
-        }
-
-        console.log(" Fetching categories from:", `${wpUrl}/categories`);
-        const categoriesResponse = await fetch(`${wpUrl}/categories`);
-
-        if (!categoriesResponse.ok) {
-          console.log(
-            " Categories response not OK:",
-            categoriesResponse.status,
-            categoriesResponse.statusText
-          );
-          throw new Error(
-            `Categories API returned ${categoriesResponse.status}`
-          );
-        }
-
-        const contentType = categoriesResponse.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          const responseText = await categoriesResponse.text();
-          console.log(
-            " Categories response is not JSON:",
-            responseText.substring(0, 200)
-          );
-          throw new Error(
-            "Categories API returned HTML instead of JSON - check your WordPress URL"
-          );
-        }
-
-        const categoriesData = await categoriesResponse.json();
+        // Fetch categories
+        console.log("[ShowCase] Fetching categories...");
+        const categoriesData = await wordPressAPI.fetchCategories();
         const categoryNames = [
           "all",
           ...categoriesData.map((cat) => cat.name.toLowerCase()),
         ];
         setCategories(categoryNames);
 
-        console.log(
-          " Fetching posts from:",
-          `${wpUrl}/posts?per_page=50&_embed`
-        );
-        const response = await fetch(`${wpUrl}/posts?per_page=50&_embed`);
+        // Fetch maintenance guides
+        console.log("[ShowCase] Fetching maintenance guides...");
+        const guidesData = await wordPressAPI.fetchMaintenanceGuides();
 
-        if (!response.ok) {
-          console.log(
-            " Posts response not OK:",
-            response.status,
-            response.statusText
-          );
-          throw new Error(`Posts API returned ${response.status}`);
-        }
-
-        const postsContentType = response.headers.get("content-type");
-        if (
-          !postsContentType ||
-          !postsContentType.includes("application/json")
-        ) {
-          const responseText = await response.text();
-          console.log(
-            " Posts response is not JSON:",
-            responseText.substring(0, 200)
-          );
-          throw new Error(
-            "Posts API returned HTML instead of JSON - check your WordPress URL and REST API"
-          );
-        }
-
-        const posts = await response.json();
-
-        const fetched = posts.map((post) => ({
-          ...post, // Pass the entire WordPress post object
+        // Format and enrich guide data
+        const enrichedGuides = guidesData.map((post) => ({
+          ...post,
           category:
             post._embedded?.["wp:term"]?.[0]?.[0]?.name?.toLowerCase() ||
-            "tools",
+            "general",
         }));
 
-        setShowCase(fetched);
+        setShowCase(enrichedGuides);
       } catch (err) {
-        console.error("🔥 Failed to fetch WordPress showcases:", err);
+        console.error("[ShowCase] Failed to fetch maintenance guides:", err);
+        setError(
+          err.message ||
+            "Failed to load maintenance guides. Please try again later."
+        );
       } finally {
         setLoading(false);
       }
@@ -115,7 +65,7 @@ export default function ShowCase() {
   const filteredShowCases =
     activeCategory === "all"
       ? showCase
-      : showCase.filter((showCase) => showCase.category === activeCategory);
+      : showCase.filter((guide) => guide.category === activeCategory);
 
   if (loading) {
     return (
@@ -127,10 +77,22 @@ export default function ShowCase() {
     );
   }
 
+  if (error) {
+    return (
+      <Container sx={{ my: 6 }}>
+        <Alert severity="info">
+          Maintenance guides are being set up. Please configure the
+          "maintenance-guide" custom post type in WordPress and add your
+          content. {error}
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
     <Container sx={{ my: 6 }}>
       <Typography variant="h4" gutterBottom>
-        ShowCASE
+        Maintenance Guides
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
@@ -157,13 +119,21 @@ export default function ShowCase() {
         </ButtonGroup>
       </Box>
 
-      <Grid container spacing={4}>
-        {filteredShowCases.map((showCase) => (
-          <Grid item key={showCase.id} xs={12} sm={6} md={4}>
-            <ArticleCard article={showCase} type="showCase" />
-          </Grid>
-        ))}
-      </Grid>
+      {filteredShowCases.length === 0 ? (
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <Typography color="textSecondary">
+            No maintenance guides found in this category.
+          </Typography>
+        </Box>
+      ) : (
+        <Grid container spacing={4}>
+          {filteredShowCases.map((guide) => (
+            <Grid item key={guide.id} xs={12} sm={6} md={4}>
+              <ArticleCard article={guide} type="showCase" />
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Container>
   );
 }
