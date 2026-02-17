@@ -25,7 +25,7 @@ export default function FeaturedShowCase() {
         const wpUrl = process.env.REACT_APP_WORDPRESS_URL;
 
         if (!wpUrl) {
-          console.error("[v0] WordPress URL not configured");
+          console.error(" WordPress URL not configured");
           return;
         }
 
@@ -47,18 +47,18 @@ export default function FeaturedShowCase() {
         }
 
         if (!showcaseCategoryId) {
-          console.error("[v0] ShowCASE category not found");
+          console.error(" ShowCASE category not found");
           return;
         }
 
         const apiUrl = `${wpUrl}/posts?per_page=6&categories=${showcaseCategoryId}&_embed`;
 
-        console.log("[v0] Fetching featured showcases from:", apiUrl);
+        console.log(" Fetching featured showcases from:", apiUrl);
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
           console.log(
-            "[v0] Featured showcases response not OK:",
+            " Featured showcases response not OK:",
             response.status,
             response.statusText
           );
@@ -69,7 +69,7 @@ export default function FeaturedShowCase() {
         if (!contentType || !contentType.includes("application/json")) {
           const responseText = await response.text();
           console.log(
-            "[v0] Featured showcases response is not JSON:",
+            " Featured showcases response is not JSON:",
             responseText.substring(0, 200)
           );
           throw new Error(

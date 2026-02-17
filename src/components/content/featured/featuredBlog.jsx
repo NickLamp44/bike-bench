@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import ArticleCard from "../article/articleCard";
 
-const categories = [ "All", "How To", "Product Review",];
+const categories = ["All", "How To", "Product Review"];
 
 export default function FeaturedBlogs() {
   const [activeCategory, setActiveCategory] = useState("");
@@ -25,7 +25,7 @@ export default function FeaturedBlogs() {
         const wpUrl = process.env.REACT_APP_WORDPRESS_URL;
 
         if (!wpUrl) {
-          console.error("[v0] WordPress URL not configured");
+          console.error(" WordPress URL not configured");
           return;
         }
 
@@ -44,12 +44,12 @@ export default function FeaturedBlogs() {
           }
         }
 
-        console.log("[v0] Fetching featured blogs from:", apiUrl);
+        console.log(" Fetching featured blogs from:", apiUrl);
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
           console.log(
-            "[v0] Featured blogs response not OK:",
+            " Featured blogs response not OK:",
             response.status,
             response.statusText
           );
@@ -60,7 +60,7 @@ export default function FeaturedBlogs() {
         if (!contentType || !contentType.includes("application/json")) {
           const responseText = await response.text();
           console.log(
-            "[v0] Featured blogs response is not JSON:",
+            " Featured blogs response is not JSON:",
             responseText.substring(0, 200)
           );
           throw new Error("Featured blogs API returned HTML instead of JSON");

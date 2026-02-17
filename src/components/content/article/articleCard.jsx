@@ -91,7 +91,7 @@ export default function ArticleCard({ article, type = "blog" }) {
         .join("")
         .toUpperCase();
     } catch (error) {
-      console.error("[v0] Error generating initials:", error);
+      console.error(" Error generating initials:", error);
       return "TB";
     }
   };

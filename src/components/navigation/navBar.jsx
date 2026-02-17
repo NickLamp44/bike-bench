@@ -29,7 +29,7 @@ const pages = [
   // { label: "Shop", path: "/shop" },
 ];
 
-const settings = ["Profile", "Settings", "Logout"];
+const settings = ["Profile", "Logout"];
 
 const Search = styled("div")(({ theme }) => ({
   position: "relative",

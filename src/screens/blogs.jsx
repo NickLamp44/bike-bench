@@ -29,12 +29,12 @@ export default function Blogs() {
           );
         }
 
-        console.log("[v0] Fetching categories from:", `${wpUrl}/categories`);
+        console.log(" Fetching categories from:", `${wpUrl}/categories`);
         const categoriesResponse = await fetch(`${wpUrl}/categories`);
 
         if (!categoriesResponse.ok) {
           console.log(
-            "[v0] Categories response not OK:",
+            " Categories response not OK:",
             categoriesResponse.status,
             categoriesResponse.statusText
           );
@@ -47,7 +47,7 @@ export default function Blogs() {
         if (!contentType || !contentType.includes("application/json")) {
           const responseText = await categoriesResponse.text();
           console.log(
-            "[v0] Categories response is not JSON:",
+            " Categories response is not JSON:",
             responseText.substring(0, 200)
           );
           throw new Error(
@@ -63,14 +63,14 @@ export default function Blogs() {
         setCategories(categoryNames);
 
         console.log(
-          "[v0] Fetching posts from:",
+          " Fetching posts from:",
           `${wpUrl}/posts?per_page=50&_embed`
         );
         const response = await fetch(`${wpUrl}/posts?per_page=50&_embed`);
 
         if (!response.ok) {
           console.log(
-            "[v0] Posts response not OK:",
+            " Posts response not OK:",
             response.status,
             response.statusText
           );
@@ -84,7 +84,7 @@ export default function Blogs() {
         ) {
           const responseText = await response.text();
           console.log(
-            "[v0] Posts response is not JSON:",
+            " Posts response is not JSON:",
             responseText.substring(0, 200)
           );
           throw new Error(

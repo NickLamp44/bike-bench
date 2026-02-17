@@ -55,19 +55,19 @@ export default function HeroCarousel() {
         const wpUrl = process.env.REACT_APP_WORDPRESS_URL;
 
         if (!wpUrl) {
-          console.error("[v0] WordPress URL not configured");
+          console.error(" WordPress URL not configured");
           return;
         }
 
         console.log(
-          "[v0] Fetching hero slider blogs from:",
+          " Fetching hero slider blogs from:",
           `${wpUrl}/posts?per_page=5&_embed`
         );
         const response = await fetch(`${wpUrl}/posts?per_page=5&_embed`);
 
         if (!response.ok) {
           console.log(
-            "[v0] Hero slider response not OK:",
+            " Hero slider response not OK:",
             response.status,
             response.statusText
           );
@@ -78,7 +78,7 @@ export default function HeroCarousel() {
         if (!contentType || !contentType.includes("application/json")) {
           const responseText = await response.text();
           console.log(
-            "[v0] Hero slider response is not JSON:",
+            " Hero slider response is not JSON:",
             responseText.substring(0, 200)
           );
           throw new Error("Hero slider API returned HTML instead of JSON");
@@ -128,7 +128,14 @@ export default function HeroCarousel() {
   const currentSlide = blogSlides[currentIndex];
 
   return (
-    <Box sx={{ maxWidth: "80%",padding: 5,  margin: "0 auto", position: "relative" }}>
+    <Box
+      sx={{
+        maxWidth: "80%",
+        padding: 5,
+        margin: "0 auto",
+        position: "relative",
+      }}
+    >
       <Paper
         elevation={3}
         sx={{
