@@ -24,8 +24,7 @@ import { useCart } from "../../context/cartContext";
 import CartModal from "../store/cart/cartModal";
 
 const pages = [
-  { label: "Blogs", path: "/blogs" },
-  { label: "ShowCase", path: "/showcases" },
+  { label: "Content", path: "/content" },
   // { label: "Shop", path: "/shop" },
 ];
 

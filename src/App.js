@@ -11,8 +11,7 @@ import ShowCaseArticle from "./components/content/article/showCaseArticle";
 import MerchItem from "./components/store/merchItem";
 
 import Home from "./screens/home";
-import Blogs from "./screens/blogs";
-import ShowCase from "./screens/showCase";
+import Content from "./screens/content";
 import Merch from "./screens/merch";
 import Checkout from "./screens/checkOut";
 import Profile from "./screens/profile";
@@ -42,15 +41,10 @@ function App() {
               {/* Home Page  */}
               <Route path="/" element={<Home />} />
 
-              {/* Blogs + showCASE */}
-              <Route path="/blogs" element={<Blogs />} />
+              {/* Unified Content (blogs, guides, reviews, interviews, galleries, etc.) */}
+              <Route path="/content" element={<Content />} />
               <Route path="/blog/:blogId" element={<BlogArticle />} />
-
-              <Route path="/showcases" element={<ShowCase />} />
-              <Route
-                path="/showcase/:showCaseId"
-                element={<ShowCaseArticle />}
-              />
+              <Route path="/showcase/:showCaseId" element={<ShowCaseArticle />} />
 
               {/* Merch */}
               <Route path="/shop" element={<Merch />} />

@@ -61,16 +61,26 @@ const fetchFromWP = async (endpoint, options = {}) => {
 };
 
 /**
- * Fetch posts of a specific type
- * @param {string} postType - Type of post (e.g., 'blog', 'maintenance-guide', 'post')
+ * Fetch all posts (unified content: blogs, guides, reviews, interviews, galleries, etc.)
+ * All differentiation is done through categories and tags
  * @param {object} filters - Query filters (page, per_page, search, etc.)
  */
-export const fetchPosts = async (
-  postType = "post",
-  filters = { per_page: 50 }
-) => {
+export const fetchAllPosts = async (filters = { per_page: 50 }) => {
   const params = new URLSearchParams({
-    type: postType,
+    _embed: true,
+    ...filters,
+  });
+
+  return fetchFromWP(`/posts?${params.toString()}`);
+};
+
+/**
+ * Fetch all posts (unified content: blogs, guides, reviews, interviews, galleries, etc.)
+ * All differentiation is done through categories and tags
+ * @param {object} filters - Query filters (page, per_page, search, etc.)
+ */
+export const fetchAllPosts = async (filters = { per_page: 50 }) => {
+  const params = new URLSearchParams({
     _embed: true,
     ...filters,
   });
@@ -81,10 +91,10 @@ export const fetchPosts = async (
 /**
  * Fetch a single post by ID
  * @param {number} id - Post ID
- * @param {string} postType - Type of post
+ * @param {string} postType - Type of post (deprecated, kept for compatibility)
  */
 export const fetchPostById = async (id, postType = "post") => {
-  return fetchFromWP(`/posts/${id}?type=${postType}&_embed=true`);
+  return fetchFromWP(`/posts/${id}?_embed=true`);
 };
 
 /**
