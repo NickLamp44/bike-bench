@@ -35,34 +35,34 @@ export default function Blogs() {
         ];
         setCategories(categoryNames);
 
-        // Fetch blog articles specifically
-        console.log("[Blogs] Fetching blog articles...");
-        const blogsData = await wordPressAPI.fetchBlogArticles();
+        // Fetch all posts (flexible for all content types)
+        console.log("[Blogs] Fetching all posts...");
+        const postsData = await wordPressAPI.fetchAllPosts();
 
-        // Format and enrich blog data
-        const enrichedBlogs = blogsData.map((post) => ({
+        // Format and enrich post data
+        const enrichedPosts = postsData.map((post) => ({
           ...post,
           category:
             post._embedded?.["wp:term"]?.[0]?.[0]?.name?.toLowerCase() ||
             "general",
         }));
 
-        setBlogs(enrichedBlogs);
+        setPosts(enrichedPosts);
       } catch (err) {
-        console.error("[Blogs] Failed to fetch blogs:", err);
-        setError(err.message || "Failed to load blogs. Please try again later.");
+        console.error("[Blogs] Failed to fetch posts:", err);
+        setError(err.message || "Failed to load content. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCategoriesAndBlogs();
+    fetchCategoriesAndPosts();
   }, []);
 
-  const filteredBlogs =
+  const filteredPosts =
     activeCategory === "all"
-      ? blogs
-      : blogs.filter((blog) => blog.category === activeCategory);
+      ? posts
+      : posts.filter((post) => post.category === activeCategory);
 
   if (loading) {
     return (
@@ -85,7 +85,7 @@ export default function Blogs() {
   return (
     <Container sx={{ my: 6 }}>
       <Typography variant="h4" gutterBottom>
-        Blog Articles
+        Blog & Articles
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>

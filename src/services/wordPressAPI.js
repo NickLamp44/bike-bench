@@ -118,42 +118,41 @@ export const fetchPostsByCategory = async (
 };
 
 /**
- * Fetch blog articles specifically
- * Filters for custom 'blog' post type, falls back to regular posts if not available
+ * Fetch all posts (flexible for all content types)
+ * Uses categories and tags to organize content types
  * @param {object} filters - Query filters
  */
-export const fetchBlogArticles = async (filters = { per_page: 50 }) => {
-  try {
-    // First, try to fetch custom 'blog' post type
-    return await fetchPosts("blog", filters);
-  } catch (error) {
-    console.log(
-      "[WordPress API] Custom 'blog' post type not found, falling back to standard posts"
-    );
-    // Fallback to standard posts
-    return await fetchPosts("post", filters);
-  }
+export const fetchAllPosts = async (filters = { per_page: 50 }) => {
+  return await fetchPosts("post", filters);
 };
 
 /**
- * Fetch maintenance guides specifically
- * Filters for custom 'maintenance-guide' post type
- * @param {object} filters - Query filters
+ * Fetch posts by tag
+ * Useful for filtering by content type or other classifications
+ * @param {string|number} tagId - Tag ID or slug
+ * @param {object} filters - Additional query filters
  */
-export const fetchMaintenanceGuides = async (
+export const fetchPostsByTag = async (
+  tagId,
   filters = { per_page: 50 }
 ) => {
-  try {
-    // Fetch custom 'maintenance-guide' post type
-    return await fetchPosts("maintenance-guide", filters);
-  } catch (error) {
-    console.log(
-      "[WordPress API] Custom 'maintenance-guide' post type not found"
-    );
-    throw new Error(
-      "Maintenance guides post type not configured in WordPress"
-    );
-  }
+  const params = new URLSearchParams({
+    tags: tagId,
+    _embed: true,
+    ...filters,
+  });
+
+  return fetchFromWP(`/posts?${params.toString()}`);
+};
+
+/**
+ * Fetch all tags
+ * Useful for displaying content type filters
+ * @param {object} filters - Query filters
+ */
+export const fetchTags = async (filters = { per_page: 100 }) => {
+  const params = new URLSearchParams(filters);
+  return fetchFromWP(`/tags?${params.toString()}`);
 };
 
 /**
@@ -252,8 +251,9 @@ export default {
   fetchPostById,
   fetchCategories,
   fetchPostsByCategory,
-  fetchBlogArticles,
-  fetchMaintenanceGuides,
+  fetchAllPosts,
+  fetchPostsByTag,
+  fetchTags,
   getFeaturedImageUrl,
   getPostCategories,
   formatPost,
