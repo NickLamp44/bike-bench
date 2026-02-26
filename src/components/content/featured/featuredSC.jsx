@@ -1,137 +1,252 @@
-"use client";
-
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
-  Container,
-  Typography,
-  Button,
-  ButtonGroup,
-  Grid,
   Box,
+  Typography,
+  Grid,
+  Chip,
   CircularProgress,
+  ButtonBase,
 } from "@mui/material";
-import ArticleCard from "../article/articleCard";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import * as wordPressAPI from "../../../services/wordPressAPI";
+import { decodeHtmlEntities } from "../../../util/htmlDecoder";
 
-const categories = ["All", "ShowCASE", "Custom Tools", "TBOY"];
+const SHOWCASE_SLUGS = ["showcase", "community", "toolbox", "community-builds", "tool-deep-dive"];
 
-export default function FeaturedShowCase() {
-  const [activeCategory, setActiveCategory] = useState("");
-  const [showcases, setShowcases] = useState([]);
-  const [loadingShowcases, setLoadingShowcases] = useState(true);
+function extractImage(post) {
+  const media = post._embedded?.["wp:featuredmedia"]?.[0];
+  if (media?.source_url && !media.code) return media.source_url;
+  const match = post.content?.rendered?.match(/<img[^>]+src="([^">]+)"/);
+  if (match) return match[1];
+  return "/showcase-featured-image.png";
+}
 
-  useEffect(() => {
-    const fetchShowcases = async () => {
-      try {
-        const wpUrl = process.env.REACT_APP_WORDPRESS_URL;
-
-        if (!wpUrl) {
-          console.error(" WordPress URL not configured");
-          return;
-        }
-
-        const categoriesResponse = await fetch(
-          `${wpUrl}/categories?search=ShowCASE`
-        );
-        let showcaseCategoryId = null;
-
-        if (categoriesResponse.ok) {
-          const categoryData = await categoriesResponse.json();
-          const showcaseCategory = categoryData.find(
-            (cat) =>
-              cat.name.toLowerCase().includes("ShowCASE") ||
-              cat.slug.toLowerCase().includes("showcase")
-          );
-          if (showcaseCategory) {
-            showcaseCategoryId = showcaseCategory.id;
-          }
-        }
-
-        if (!showcaseCategoryId) {
-          console.error(" ShowCASE category not found");
-          return;
-        }
-
-        const apiUrl = `${wpUrl}/posts?per_page=6&categories=${showcaseCategoryId}&_embed`;
-
-        console.log(" Fetching featured showcases from:", apiUrl);
-        const response = await fetch(apiUrl);
-
-        if (!response.ok) {
-          console.log(
-            " Featured showcases response not OK:",
-            response.status,
-            response.statusText
-          );
-          throw new Error(`Featured showcases API returned ${response.status}`);
-        }
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          const responseText = await response.text();
-          console.log(
-            " Featured showcases response is not JSON:",
-            responseText.substring(0, 200)
-          );
-          throw new Error(
-            "Featured showcases API returned HTML instead of JSON"
-          );
-        }
-
-        const posts = await response.json();
-        setShowcases(posts);
-      } catch (err) {
-        console.error("🔥 Failed to fetch WordPress showcases:", err);
-      } finally {
-        setLoadingShowcases(false);
-      }
-    };
-
-    fetchShowcases();
-  }, [activeCategory]);
+function HeroCard({ post }) {
+  const image = extractImage(post);
+  const title = decodeHtmlEntities(post.title?.rendered || "");
+  const excerpt = post.excerpt?.rendered?.replace(/<[^>]*>/g, "").slice(0, 120) || "";
+  const date = new Date(post.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const slug = post.slug || post.id;
+  const cats = wordPressAPI.getPostCategories(post);
 
   return (
-    <Container sx={{ my: 6 }}>
-      <Typography variant="h4" gutterBottom>
-        Featured ShowCases
-      </Typography>
-
-      {/* <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
-        <ButtonGroup variant="text" aria-label="category button group">
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              variant={activeCategory === cat ? "contained" : "text"}
-              sx={{
-                textTransform: "capitalize",
-                color: activeCategory === cat ? "white" : "inherit",
-                backgroundColor:
-                  activeCategory === cat ? "primary.main" : "transparent",
-                "&:hover": {
-                  backgroundColor:
-                    activeCategory === cat ? "primary.dark" : "action.hover",
-                },
-              }}
-            >
-              {cat}
-            </Button>
-          ))}
-        </ButtonGroup>
-      </Box> */}
-
-      {loadingShowcases ? (
-        <Box display="flex" justifyContent="center">
-          <CircularProgress />
+    <ButtonBase
+      component={Link}
+      to={`/showcase/${slug}`}
+      sx={{
+        display: "block",
+        textAlign: "left",
+        width: "100%",
+        borderRadius: 2,
+        overflow: "hidden",
+        "&:hover .card-img": { transform: "scale(1.04)" },
+        "&:hover .card-title": { opacity: 0.85 },
+      }}
+    >
+      <Box sx={{ position: "relative", overflow: "hidden", borderRadius: 2, aspectRatio: "16/10" }}>
+        <Box
+          className="card-img"
+          sx={{
+            width: "100%",
+            height: "100%",
+            backgroundImage: `url(${image})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            transition: "transform 0.45s ease",
+          }}
+        />
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)",
+          }}
+        />
+        <Box sx={{ position: "absolute", bottom: 0, left: 0, p: { xs: 2.5, md: 3.5 } }}>
+          {cats.length > 0 && (
+            <Chip
+              label={cats[0].name}
+              size="small"
+              sx={{ mb: 1.5, backgroundColor: "#507e6c", color: "white", fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase" }}
+            />
+          )}
+          <Typography
+            className="card-title"
+            variant="h5"
+            sx={{ color: "white", fontWeight: 800, lineHeight: 1.2, mb: 1, fontSize: { xs: "1.2rem", md: "1.5rem" }, transition: "opacity 0.2s" }}
+          >
+            {title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.5, display: { xs: "none", sm: "block" }, mb: 1 }}>
+            {excerpt}
+          </Typography>
+          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)", letterSpacing: "0.05em" }}>
+            {date}
+          </Typography>
         </Box>
-      ) : (
-        <Grid container spacing={3}>
-          {showcases.map((showcase) => (
-            <Grid item key={showcase.id} xs={12} sm={6} md={4}>
-              <ArticleCard article={showcase} type="showcase" />
-            </Grid>
-          ))}
-        </Grid>
-      )}
-    </Container>
+      </Box>
+    </ButtonBase>
   );
 }
+
+function SmallCard({ post }) {
+  const image = extractImage(post);
+  const title = decodeHtmlEntities(post.title?.rendered || "");
+  const date = new Date(post.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const slug = post.slug || post.id;
+
+  return (
+    <ButtonBase
+      component={Link}
+      to={`/showcase/${slug}`}
+      sx={{
+        display: "flex",
+        textAlign: "left",
+        width: "100%",
+        gap: 2,
+        alignItems: "flex-start",
+        borderRadius: 1.5,
+        p: 1,
+        mx: -1,
+        "&:hover .sm-img": { transform: "scale(1.05)" },
+        "&:hover .sm-title": { color: "#507e6c" },
+      }}
+    >
+      <Box sx={{ flexShrink: 0, width: 90, height: 68, borderRadius: 1.5, overflow: "hidden" }}>
+        <Box
+          className="sm-img"
+          sx={{
+            width: "100%",
+            height: "100%",
+            backgroundImage: `url(${image})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            transition: "transform 0.35s ease",
+          }}
+        />
+      </Box>
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography
+          className="sm-title"
+          variant="body2"
+          sx={{ fontWeight: 700, lineHeight: 1.3, mb: 0.5, transition: "color 0.2s", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+        >
+          {title}
+        </Typography>
+        <Typography variant="caption" sx={{ color: "text.disabled", letterSpacing: "0.04em" }}>
+          {date}
+        </Typography>
+      </Box>
+    </ButtonBase>
+  );
+}
+
+export default function FeaturedShowCase() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    wordPressAPI
+      .fetchAllPosts({ per_page: 7 })
+      .then((all) => {
+        const filtered = all.filter((p) =>
+          wordPressAPI.getPostCategories(p).some((c) => SHOWCASE_SLUGS.includes(c.slug?.toLowerCase()))
+        );
+        setPosts(filtered.length >= 2 ? filtered : all.slice(0, 7));
+      })
+      .catch(() => setPosts([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const [hero, ...rest] = posts;
+  const sideCards = rest.slice(0, 3);
+
+  return (
+    <Box
+      component="section"
+      sx={{ px: { xs: 2, sm: 4, md: 6, lg: 8 }, py: { xs: 5, md: 7 } }}
+    >
+      {/* Section header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          mb: 3,
+          pb: 1.5,
+          borderBottom: "2px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Box>
+          <Typography
+            variant="overline"
+            sx={{ letterSpacing: "0.18em", color: "#507e6c", fontWeight: 700, display: "block", lineHeight: 1, mb: 0.5 }}
+          >
+            Featured
+          </Typography>
+          <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            Show<span style={{ color: "#507e6c" }}>CASE</span>
+          </Typography>
+        </Box>
+        <Box
+          component={Link}
+          to="/showcase"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            color: "text.secondary",
+            textDecoration: "none",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            "&:hover": { color: "#507e6c" },
+            transition: "color 0.2s",
+          }}
+        >
+          View all <ArrowForwardIcon sx={{ fontSize: 16 }} />
+        </Box>
+      </Box>
+
+      {loading ? (
+        <Box display="flex" justifyContent="center" py={6}>
+          <CircularProgress />
+        </Box>
+      ) : posts.length === 0 ? (
+        <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+          No ShowCASE posts yet. Add posts with a "showcase" category in WordPress.
+        </Typography>
+      ) : (
+        <Grid container spacing={3} alignItems="stretch">
+          {/* Hero card — left column */}
+          <Grid item xs={12} md={7}>
+            {hero && <HeroCard post={hero} />}
+          </Grid>
+
+          {/* Side cards — right column */}
+          <Grid item xs={12} md={5}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                height: "100%",
+                justifyContent: "space-between",
+                borderLeft: { md: "1px solid" },
+                borderColor: { md: "divider" },
+                pl: { md: 3 },
+              }}
+            >
+              {sideCards.map((post) => (
+                <SmallCard key={post.id} post={post} />
+              ))}
+            </Box>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+}
+
