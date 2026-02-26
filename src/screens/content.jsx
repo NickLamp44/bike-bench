@@ -7,21 +7,21 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  TextField,
   MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
+  InputAdornment,
   Divider,
 } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 import ArticleCard from "../components/content/article/articleCard";
 import * as wordPressAPI from "../services/wordPressAPI";
 
 const SORT_OPTIONS = [
-  { value: "date_desc", label: "Newest First" },
-  { value: "date_asc", label: "Oldest First" },
-  { value: "author_asc", label: "Author A–Z" },
-  { value: "author_desc", label: "Author Z–A" },
-  { value: "title_asc", label: "Title A–Z" },
+  { value: "date-desc", label: "Newest First" },
+  { value: "date-asc", label: "Oldest First" },
+  { value: "title-asc", label: "Title A–Z" },
+  { value: "title-desc", label: "Title Z–A" },
+  { value: "author-asc", label: "Author A–Z" },
 ];
 
 export default function Blogs() {
@@ -29,7 +29,8 @@ export default function Blogs() {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeAuthor, setActiveAuthor] = useState("all");
-  const [sortBy, setSortBy] = useState("date_desc");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("date-desc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,14 +38,14 @@ export default function Blogs() {
     const load = async () => {
       try {
         setError(null);
-        const [all, cats] = await Promise.all([
-          wordPressAPI.fetchAllPosts(),
+        const [allPosts, allCategories] = await Promise.all([
+          wordPressAPI.fetchAllPosts({ per_page: 100 }),
           wordPressAPI.fetchCategories(),
         ]);
-        setPosts(all);
-        setCategories(cats);
+        setPosts(allPosts);
+        setCategories(allCategories);
       } catch (err) {
-        setError(err.message || "Failed to load content.");
+        setError(err.message || "Failed to load blog content.");
       } finally {
         setLoading(false);
       }
@@ -52,74 +53,72 @@ export default function Blogs() {
     load();
   }, []);
 
-  // Derive unique author names from loaded posts
+  // Derive unique authors from embedded post data
   const authors = useMemo(() => {
-    const set = new Set();
+    const map = new Map();
     posts.forEach((post) => {
-      const name = post._embedded?.author?.[0]?.name;
-      if (name) set.add(name);
+      const author = wordPressAPI.getPostAuthor(post);
+      if (author && !map.has(author.id)) {
+        map.set(author.id, author.name || author.slug || "Unknown");
+      }
     });
-    return [...set].sort();
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
   }, [posts]);
 
-  // Filter then sort
+  // Apply filters then sort
   const visible = useMemo(() => {
     let result = [...posts];
 
     if (activeCategory !== "all") {
       result = result.filter((post) =>
-        post._embedded?.["wp:term"]?.[0]?.some(
-          (c) => c.slug?.toLowerCase() === activeCategory
-        )
+        wordPressAPI.getPostCategories(post).some((c) => c.slug === activeCategory)
       );
     }
 
     if (activeAuthor !== "all") {
+      result = result.filter((post) => {
+        const author = wordPressAPI.getPostAuthor(post);
+        return author && String(author.id) === String(activeAuthor);
+      });
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
       result = result.filter(
-        (post) => post._embedded?.author?.[0]?.name === activeAuthor
+        (post) =>
+          post.title?.rendered?.toLowerCase().includes(q) ||
+          post.excerpt?.rendered?.toLowerCase().includes(q)
       );
     }
 
-    switch (sortBy) {
-      case "date_asc":
-        result.sort((a, b) => new Date(a.date) - new Date(b.date));
-        break;
-      case "date_desc":
-        result.sort((a, b) => new Date(b.date) - new Date(a.date));
-        break;
-      case "author_asc":
-        result.sort((a, b) =>
-          (a._embedded?.author?.[0]?.name || "").localeCompare(
-            b._embedded?.author?.[0]?.name || ""
-          )
-        );
-        break;
-      case "author_desc":
-        result.sort((a, b) =>
-          (b._embedded?.author?.[0]?.name || "").localeCompare(
-            a._embedded?.author?.[0]?.name || ""
-          )
-        );
-        break;
-      case "title_asc":
-        result.sort((a, b) =>
-          (a.title?.rendered || "").localeCompare(b.title?.rendered || "")
-        );
-        break;
-      default:
-        break;
-    }
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "date-asc":
+          return new Date(a.date) - new Date(b.date);
+        case "date-desc":
+          return new Date(b.date) - new Date(a.date);
+        case "title-asc":
+          return a.title?.rendered?.localeCompare(b.title?.rendered);
+        case "title-desc":
+          return b.title?.rendered?.localeCompare(a.title?.rendered);
+        case "author-asc": {
+          const aName = wordPressAPI.getPostAuthor(a)?.name || "";
+          const bName = wordPressAPI.getPostAuthor(b)?.name || "";
+          return aName.localeCompare(bName);
+        }
+        default:
+          return 0;
+      }
+    });
 
     return result;
-  }, [posts, activeCategory, activeAuthor, sortBy]);
+  }, [posts, activeCategory, activeAuthor, searchQuery, sortBy]);
 
   if (loading) {
     return (
-      <Container sx={{ my: 6 }}>
-        <Box display="flex" justifyContent="center">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <Box display="flex" justifyContent="center" sx={{ my: 10 }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
@@ -132,108 +131,138 @@ export default function Blogs() {
   }
 
   return (
-    <Container sx={{ my: 6 }}>
-      {/* Header */}
-      <Box sx={{ mb: 5 }}>
-        <Typography variant="h3" fontWeight={800} gutterBottom>
+    <Box sx={{ width: "100%" }}>
+      {/* Page Header */}
+      <Box
+        sx={{
+          background: "linear-gradient(135deg, #1a1a1a 0%, #1a2d3a 100%)",
+          color: "white",
+          py: { xs: 6, md: 10 },
+          px: { xs: 3, md: 8 },
+          mb: 6,
+        }}
+      >
+        <Typography
+          variant="overline"
+          sx={{ letterSpacing: "0.2em", opacity: 0.7, display: "block", mb: 1 }}
+        >
+          All Content
+        </Typography>
+        <Typography
+          variant="h2"
+          sx={{
+            fontWeight: 900,
+            fontSize: { xs: "2.5rem", md: "4rem" },
+            letterSpacing: "-0.02em",
+            lineHeight: 1.05,
+            mb: 2,
+          }}
+        >
           Blogs
         </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Everything in one place — browse all articles, guides, reviews, and
-          more.
+        <Typography variant="body1" sx={{ opacity: 0.8, maxWidth: 560, lineHeight: 1.7 }}>
+          Every article in one place — browse by category, filter by author, or
+          search for exactly what you need.
         </Typography>
       </Box>
 
-      {/* Filters row */}
-      <Box
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        {/* Author filter */}
-        {authors.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel id="author-select-label">Author</InputLabel>
-            <Select
-              labelId="author-select-label"
-              value={activeAuthor}
+      <Container maxWidth="xl" sx={{ pb: 8 }}>
+        {/* Controls row: search, author filter, sort */}
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 4 }}>
+          <TextField
+            size="small"
+            placeholder="Search articles..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{ minWidth: 220, flexGrow: 1, maxWidth: 360 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          {authors.length > 0 && (
+            <TextField
+              select
+              size="small"
               label="Author"
+              value={activeAuthor}
               onChange={(e) => setActiveAuthor(e.target.value)}
+              sx={{ minWidth: 180 }}
             >
               <MenuItem value="all">All Authors</MenuItem>
-              {authors.map((author) => (
-                <MenuItem key={author} value={author}>
-                  {author}
+              {authors.map(({ id, name }) => (
+                <MenuItem key={id} value={String(id)}>
+                  {name}
                 </MenuItem>
               ))}
-            </Select>
-          </FormControl>
-        )}
+            </TextField>
+          )}
 
-        {/* Sort */}
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel id="sort-select-label">Sort By</InputLabel>
-          <Select
-            labelId="sort-select-label"
+          <TextField
+            select
+            size="small"
+            label="Sort by"
             value={sortBy}
-            label="Sort By"
             onChange={(e) => setSortBy(e.target.value)}
+            sx={{ minWidth: 160 }}
           >
             {SORT_OPTIONS.map((opt) => (
               <MenuItem key={opt.value} value={opt.value}>
                 {opt.label}
               </MenuItem>
             ))}
-          </Select>
-        </FormControl>
-
-        <Typography variant="body2" color="text.secondary" sx={{ ml: "auto" }}>
-          {visible.length} {visible.length === 1 ? "article" : "articles"}
-        </Typography>
-      </Box>
-
-      {/* Category chips */}
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 4 }}>
-        <Chip
-          label="All"
-          onClick={() => setActiveCategory("all")}
-          color={activeCategory === "all" ? "primary" : "default"}
-          variant={activeCategory === "all" ? "filled" : "outlined"}
-        />
-        {categories.map((cat) => (
-          <Chip
-            key={cat.id}
-            label={cat.name}
-            onClick={() => setActiveCategory(cat.slug)}
-            color={activeCategory === cat.slug ? "primary" : "default"}
-            variant={activeCategory === cat.slug ? "filled" : "outlined"}
-            sx={{ textTransform: "capitalize" }}
-          />
-        ))}
-      </Box>
-
-      <Divider sx={{ mb: 4 }} />
-
-      {visible.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: 6 }}>
-          <Typography color="text.secondary">
-            No articles match your current filters.
-          </Typography>
+          </TextField>
         </Box>
-      ) : (
-        <Grid container spacing={4}>
-          {visible.map((post) => (
-            <Grid item key={post.id} xs={12} sm={6} md={4}>
-              <ArticleCard article={post} type="blog" />
-            </Grid>
-          ))}
-        </Grid>
-      )}
-    </Container>
+
+        {/* Category chips */}
+        {categories.length > 0 && (
+          <>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+              <Chip
+                label="All"
+                onClick={() => setActiveCategory("all")}
+                color={activeCategory === "all" ? "primary" : "default"}
+                variant={activeCategory === "all" ? "filled" : "outlined"}
+              />
+              {categories.map((cat) => (
+                <Chip
+                  key={cat.id}
+                  label={cat.name}
+                  onClick={() => setActiveCategory(cat.slug)}
+                  color={activeCategory === cat.slug ? "primary" : "default"}
+                  variant={activeCategory === cat.slug ? "filled" : "outlined"}
+                  sx={{ textTransform: "capitalize" }}
+                />
+              ))}
+            </Box>
+            <Divider sx={{ mb: 4 }} />
+          </>
+        )}
+
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          {visible.length} {visible.length === 1 ? "article" : "articles"} found
+        </Typography>
+
+        {visible.length === 0 ? (
+          <Box sx={{ textAlign: "center", py: 8 }}>
+            <Typography color="text.secondary">
+              No articles match your current filters.
+            </Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {visible.map((post) => (
+              <Grid item key={post.id} xs={12} sm={6} md={4} lg={3}>
+                <ArticleCard article={post} type="blog" />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Container>
+    </Box>
   );
 }
-
